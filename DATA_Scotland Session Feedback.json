@@ -1,0 +1,236 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "logicAppName": {
+            "type": "String",
+            "metadata": {
+                "description": "Name of the logic app."
+            }
+        },
+        "logicAppLocation": {
+            "defaultValue": "[resourceGroup().location]",
+            "allowedValues": [
+                "eastasia",
+                "southeastasia",
+                "centralus",
+                "eastus",
+                "eastus2",
+                "westus",
+                "northcentralus",
+                "southcentralus",
+                "northeurope",
+                "westeurope",
+                "japanwest",
+                "japaneast",
+                "brazilsouth",
+                "australiaeast",
+                "australiasoutheast",
+                "southindia",
+                "centralindia",
+                "westindia",
+                "canadacentral",
+                "canadaeast",
+                "westcentralus",
+                "westus2",
+                "[resourceGroup().location]"
+            ],
+            "type": "String",
+            "metadata": {
+                "description": "Location of the logic app."
+            }
+        },
+        "microsoftforms_Connection_Name": {
+            "defaultValue": "microsoftforms",
+            "type": "String",
+            "metadata": {
+                "description": "Name of the connection."
+            }
+        },
+        "sql_Connection_Name": {
+            "defaultValue": "sql",
+            "type": "String",
+            "metadata": {
+                "description": "Name of the connection."
+            }
+        }
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Logic/workflows",
+            "name": "[parameters('logicAppName')]",
+            "apiVersion": "2016-06-01",
+            "location": "[parameters('logicAppLocation')]",
+            "properties": {
+                "state": "Disabled",
+                "definition": {
+                    "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+                    "contentVersion": "1.0.0.0",
+                    "parameters": {
+                        "$connections": {
+                            "defaultValue": {},
+                            "type": "Object"
+                        },
+                        "$authentication": {
+                            "defaultValue": {},
+                            "type": "SecureObject"
+                        }
+                    },
+                    "triggers": {
+                        "When_a_new_response_is_submitted": {
+                            "metadata": {
+                                "flowSystemMetadata": {
+                                    "swaggerOperationId": "CreateFormWebhook"
+                                }
+                            },
+                            "type": "ApiConnectionWebhook",
+                            "inputs": {
+                                "host": {
+                                    "connection": {
+                                        "name": "@parameters('$connections')['microsoftforms']['connectionId']"
+                                    }
+                                },
+                                "body": {
+                                    "eventType": "responseAdded",
+                                    "notificationUrl": "@{listCallbackUrl()}",
+                                    "source": "ms-connector"
+                                },
+                                "path": "/formapi/api/forms/@{encodeURIComponent('jdezMsJla0O1r2nH2YOsS65v4qUmlP5Np5v31C7tp71URUtaSkdYMTRBQkU2RU1UUVdHNDlGWThTRCQlQCN0PWcu')}/webhooks",
+                                "authentication": "@parameters('$authentication')"
+                            }
+                        }
+                    },
+                    "actions": {
+                        "Apply_to_each_2": {
+                            "foreach": "@triggerBody()?['value']",
+                            "actions": {
+                                "Get_response_details": {
+                                    "runAfter": {},
+                                    "metadata": {
+                                        "flowSystemMetadata": {
+                                            "swaggerOperationId": "GetFormResponseById"
+                                        }
+                                    },
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['microsoftforms']['connectionId']"
+                                            }
+                                        },
+                                        "method": "get",
+                                        "path": "/formapi/api/forms('@{encodeURIComponent('jdezMsJla0O1r2nH2YOsS65v4qUmlP5Np5v31C7tp71URUtaSkdYMTRBQkU2RU1UUVdHNDlGWThTRCQlQCN0PWcu')}')/responses",
+                                        "queries": {
+                                            "response_id": "@items('Apply_to_each_2')?['resourceData']?['responseId']"
+                                        },
+                                        "authentication": "@parameters('$authentication')"
+                                    }
+                                },
+                                "Insert_row_(V2)": {
+                                    "runAfter": {
+                                        "Get_response_details": [
+                                            "Succeeded"
+                                        ]
+                                    },
+                                    "metadata": {
+                                        "flowSystemMetadata": {
+                                            "swaggerOperationId": "PostItem_V2"
+                                        }
+                                    },
+                                    "type": "ApiConnection",
+                                    "inputs": {
+                                        "host": {
+                                            "connection": {
+                                                "name": "@parameters('$connections')['sql']['connectionId']"
+                                            }
+                                        },
+                                        "method": "post",
+                                        "body": {
+                                            "SessionName": "@body('Get_response_details')?['rb1a245fb0ee144b287688da820051b97']",
+                                            "PrizeDrawEntry": "@body('Get_response_details')?['rd0622a06a39f4a59b3b19c4c778f0cae']",
+                                            "MyKnowledge": "@body('Get_response_details')?['r77d3b10039df46aea5fefbc7ac1f98d9']",
+                                            "SpeakerKnowledge": "@body('Get_response_details')?['r8dae80fc86fc4280b69529ebce97d7ed']",
+                                            "SessionPoints": "@body('Get_response_details')?['re0c5ee1ae3364f60ad88ac15bf46b3aa']",
+                                            "SlidesDemos": "@body('Get_response_details')?['rd95c40c866e44ac18a6aeeeae4828359']",
+                                            "Engaged": "@body('Get_response_details')?['rd247250e312c4744840c6fc85379a51c']",
+                                            "AnsweredQuestions": "@body('Get_response_details')?['rb297de8f66cf41778e073ee3da323669']",
+                                            "HeartheSpeaker": "@body('Get_response_details')?['r728454066bb44b53a02482a07094d7dc']",
+                                            "SeetheSlides": "@body('Get_response_details')?['r2c5159c99a094ae88eb3cbcffb3c595a']",
+                                            "RoomComfortable": "@body('Get_response_details')?['re54216c9ae1342cb9b3601025d8e61f0']",
+                                            "Comments": "@body('Get_response_details')?['reca079f8af2546ac9d30238fafa75d1b']",
+                                            "BadgeNumber": "@body('Get_response_details')?['rca1df18139084503b37ef3d694751561']",
+                                            "SessionDescription": "@body('Get_response_details')?['r860d1cc7766b481f8b74e89c0a8e16f9']",
+                                            "CompletionTime": "@body('Get_response_details')?['submitDate']"
+                                        },
+                                        "path": "/v2/datasets/@{encodeURIComponent(encodeURIComponent('ds2019.database.windows.net'))},@{encodeURIComponent(encodeURIComponent('ds2019'))}/tables/@{encodeURIComponent(encodeURIComponent('SessionFeedback'))}/items",
+                                        "authentication": "@parameters('$authentication')"
+                                    }
+                                }
+                            },
+                            "runAfter": {},
+                            "type": "Foreach"
+                        }
+                    }
+                },
+                "parameters": {
+                    "$connections": {
+                        "value": {
+                            "microsoftforms": {
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'microsoftforms')]",
+                                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('microsoftforms_Connection_Name'))]",
+                                "connectionName": "[parameters('microsoftforms_Connection_Name')]"
+                            },
+                            "sql": {
+                                "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'sql')]",
+                                "connectionId": "[resourceId('Microsoft.Web/connections', parameters('sql_Connection_Name'))]",
+                                "connectionName": "[parameters('sql_Connection_Name')]"
+                            }
+                        }
+                    }
+                },
+                "runtimeConfiguration": {
+                    "lifetime": {
+                        "unit": "Day",
+                        "count": 30
+                    },
+                    "collections": {
+                        "maximumItemCount": 100000
+                    },
+                    "performanceProfile": {
+                        "throttles": {
+                            "mode": "Medium"
+                        }
+                    }
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Web/connections', parameters('microsoftforms_Connection_Name'))]",
+                "[resourceId('Microsoft.Web/connections', parameters('sql_Connection_Name'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Web/connections",
+            "name": "[parameters('microsoftforms_Connection_Name')]",
+            "apiVersion": "2016-06-01",
+            "location": "[parameters('logicAppLocation')]",
+            "properties": {
+                "api": {
+                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'microsoftforms')]"
+                },
+                "displayName": "[parameters('microsoftforms_Connection_Name')]"
+            }
+        },
+        {
+            "type": "Microsoft.Web/connections",
+            "name": "[parameters('sql_Connection_Name')]",
+            "apiVersion": "2016-06-01",
+            "location": "[parameters('logicAppLocation')]",
+            "properties": {
+                "api": {
+                    "id": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Web/locations/', parameters('logicAppLocation'), '/managedApis/', 'sql')]"
+                },
+                "displayName": "[parameters('sql_Connection_Name')]"
+            }
+        }
+    ]
+}
